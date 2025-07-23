@@ -1,5 +1,12 @@
-# 🐇BunLDTK
-A Cool c99 LDTK Level Loader made with json-c
+<h1 align=center>🐇BunLDTK</h1> 
+<p align=center>A Cool c99 LDTK Level Loader made with json-c</p>
+<div align=center>
+  
+  ![GitHub last commit](https://img.shields.io/github/last-commit/vivivivianne/bunldtk?style=for-the-badge&labelColor=101418&color=9ccbfb)
+  ![GitHub Repo stars](https://img.shields.io/github/stars/vivivivianne/bunldtk?style=for-the-badge&labelColor=101418&color=b9c8da)
+  ![GitHub repo size](https://img.shields.io/github/repo-size/vivivivianne/bunldtk?style=for-the-badge&labelColor=101418&color=d3bfe6)
+
+</div>
 
 ## ✅ Features:
 - Overly commented header file
