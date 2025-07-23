@@ -21,7 +21,7 @@
 
 ## ⚠️  Caveats:
 - ***Currently not feature complete!***
-- Requires bunarr and json-c
+- Requires [bunarr](https://github.com/vivivivianne/bunarr) and [json-c](https://github.com/json-c/json-c)
 - Walls w and h are relative to the minimum wall size, 
 this means you must multiply the w and h by the tile size of your game before using them.
 
