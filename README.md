@@ -13,7 +13,7 @@
 - Wall Greedy Meshing
 - Single and multi file support
 - Supports all world layouts
-- Get custom fields easily with ldtk_get_field_lvl() and ldtk_get_field_ent() functions
+- Get custom fields easily with `ldtk_get_field_lvl()` and `ldtk_get_field_ent()` functions
 - Reads data into simple to use C structs
 
 ## 💾 Usage 
