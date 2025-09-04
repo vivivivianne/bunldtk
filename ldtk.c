@@ -206,6 +206,7 @@ ldtk_lvl *ldtk_load_lvl(char *lname)
 		} else if (strcmp(layer_str, "Tiles") == 0) {
 			get_tilelayer(lvl, arr_i, "gridTiles");
 		} else if (strcmp(layer_str, "IntGrid") == 0) {
+			get_tilelayer(lvl, arr_i, "autoLayerTiles");
 			get_intgrid(lvl, arr_i);
 		} else if (strcmp(layer_str, "Entities") == 0) {
 			get_ents(lvl, arr_i);
