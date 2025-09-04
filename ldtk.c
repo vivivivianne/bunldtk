@@ -347,18 +347,24 @@ static json_object *get_lvl_json(char *name)
 static void get_tilelayer(ldtk_lvl *lvl, json_object *Layer, char *tilekey)
 {
 	if (Layer != NULL) {
-		// ldtk_Layer *tl = get_tilelayer(Layer);
 		char tsfolder[300] = "assets/Tiles/";
 		char *p = json_get_str(Layer, "__tilesetRelPath");
 		char *bname = basename(p);
 		strcat(tsfolder, bname);
+		char *layer_identifier = json_get_str(Layer, "__identifier");
+		char identifier[300];
+		strcat(identifier, layer_identifier);
+		strcat(identifier, "\0");
 
 		bunlist *content = bunlist_create(sizeof(ldtk_tile), 400, NULL);
 		i32 tilesize = json_get_i32(Layer, "__gridSize");
-
-		ldtk_layer tl = { LDTK_LAYER_TILES, z,	  tilesize,
-				  strdup(tsfolder), NULL, content };
-
+		ldtk_layer tl = { .type = LDTK_LAYER_TILES,
+				  .z = z,
+				  .tilesize = tilesize,
+				  .tileset_path = strdup(tsfolder),
+				  .composite = NULL,
+				  .content = content,
+				  .identifier = strdup(identifier) };
 		json_object *tiles = json_object_object_get(Layer, tilekey);
 		i32 len = json_object_array_length(tiles);
 		for (i32 j = 0; j < len; j++) {
@@ -369,7 +375,7 @@ static void get_tilelayer(ldtk_lvl *lvl, json_object *Layer, char *tilekey)
 
 		bunlist_append(lvl->layers, &tl);
 		free(p);
-		u32 id = bunarr_append(lvl->layers, &tl);
+		free(layer_identifier);
 	}
 }
 
@@ -405,7 +411,7 @@ static void get_intgrid(ldtk_lvl *lvl, json_object *gridLayer)
 }
 
 // creates and appends tiles to the given tile list
-static void get_tile(ldtk_lvl *lvl, bunarr *tiles, json_object *tile_i)
+static void get_tile(ldtk_lvl *lvl, bunlist *tiles, json_object *tile_i)
 {
 	json_object *jpx = json_object_object_get(tile_i, "px");
 	json_object *jsrc = json_object_object_get(tile_i, "src");
