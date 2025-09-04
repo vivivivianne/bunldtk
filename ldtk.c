@@ -13,7 +13,7 @@ static char *json_get_str(json_object *obj, char *key);
 
 static json_object *get_lvl_json(char *name);
 static void get_intgrid(ldtk_lvl *lvl, json_object *gridLayer);
-static void get_tile(ldtk_lvl *lvl, bunarr *tiles, json_object *tile_i);
+static void get_tile(ldtk_lvl *lvl, bunlist *tiles, json_object *tile_i);
 static void get_tilelayer(ldtk_lvl *lvl, json_object *Layer, char *tilekey);
 static void get_ents(ldtk_lvl *lvl, json_object *entitiyLayer);
 static void get_ngbrs(ldtk_lvl *lvl, json_object *parsed_json);
@@ -105,6 +105,13 @@ void ldtk_init(u32 tl_size, char *prj_name, char *prj_dir, LDTK_FLAGS flags)
 	json_object_put(json);
 
 	sys = ldtk_sys;
+	sys.ignored_intgrid_values = bunlist_create(sizeof(u32), 10, NULL);
+	ldtk_ignore_intgrid_value(0);
+}
+
+void ldtk_free(void)
+{
+	bunlist_destroy(sys.ignored_intgrid_values);
 }
 
 void ldtk_get_lvl_name(char *iid, char *dst)
@@ -161,9 +168,9 @@ ldtk_lvl *ldtk_load_lvl(char *lname)
 	lvl->rect.w = json_get_i32(lvl_json, "pxWid");
 	lvl->rect.h = json_get_i32(lvl_json, "pxHei");
 
-	lvl->layers = bunarr_create(sizeof(ldtk_layer), 4, NULL);
-	lvl->ngbrs = bunarr_create(sizeof(ldtk_ngbr), 6, free_neighbours);
-	lvl->walls = bunarr_create(sizeof(ldtk_wall), 60, NULL);
+	lvl->layers = bunlist_create(sizeof(ldtk_layer), 5, free_layers);
+	lvl->ngbrs = bunlist_create(sizeof(ldtk_ngbr), 6, free_neighbours);
+	lvl->walls = bunlist_create(sizeof(ldtk_wall), 60, NULL);
 
 	lvl->path = malloc(sizeof(char) * 300);
 	ldtk_get_lvl_name(lvl->id, lvl->path);
@@ -223,10 +230,10 @@ void ldtk_destroy_lvl_ex(ldtk_lvl *lvl, LDTK_LVL_FLAGS flags)
 		json_object_put(lvl->custom_fields);
 	}
 	for (u32 i = 0; i < lvl->layers->len; i++) {
-		ldtk_layer *layer_i = bunarr_get(lvl->layers, i);
+		ldtk_layer *layer_i = bunlist_get(lvl->layers, i);
 		if (!chk_flag(flags, LVL_KEEP_TILES) &&
 		    layer_i->type == LDTK_LAYER_TILES) {
-			bunarr_destroy(layer_i->content);
+			bunlist_destroy(layer_i->content);
 		}
 		if (layer_i->tileset_path != NULL) {
 			free(layer_i->tileset_path);
@@ -235,8 +242,11 @@ void ldtk_destroy_lvl_ex(ldtk_lvl *lvl, LDTK_LVL_FLAGS flags)
 			free(layer_i->composite);
 		}
 		if (layer_i->type == LDTK_LAYER_ENTITY) {
-			bunarr_destroy(layer_i->content);
+			bunlist_destroy(layer_i->content);
 		}
+	}
+	if (!chk_flag(flags, LVL_KEEP_TILES)) {
+		bunlist_destroy(lvl->layers);
 	}
 
 	if (!chk_flag(flags, LVL_KEEP_PATH)) {
@@ -245,12 +255,12 @@ void ldtk_destroy_lvl_ex(ldtk_lvl *lvl, LDTK_LVL_FLAGS flags)
 
 	if (!chk_flag(flags, LVL_KEEP_NGBR)) {
 		for (u32 i = 0; i < lvl->ngbrs->len; i++) {
-			ldtk_ngbr *ngbr = bunarr_get(lvl->ngbrs, i);
+			ldtk_ngbr *ngbr = bunlist_get(lvl->ngbrs, i);
 			free(ngbr->path);
 		}
-		bunarr_destroy(lvl->ngbrs);
+		bunlist_destroy(lvl->ngbrs);
 	}
-	bunarr_destroy(lvl->walls);
+	bunlist_destroy(lvl->walls);
 	free(lvl->bg_tile_path);
 	free(lvl->id);
 	free(lvl);
@@ -340,7 +350,7 @@ static void get_tilelayer(ldtk_lvl *lvl, json_object *Layer, char *tilekey)
 		char *bname = basename(p);
 		strcat(tsfolder, bname);
 
-		bunarr *content = bunarr_create(sizeof(ldtk_tile), 400, NULL);
+		bunlist *content = bunlist_create(sizeof(ldtk_tile), 400, NULL);
 		i32 tilesize = json_get_i32(Layer, "__gridSize");
 
 		ldtk_layer tl = { LDTK_LAYER_TILES, z,	  tilesize,
@@ -354,6 +364,7 @@ static void get_tilelayer(ldtk_lvl *lvl, json_object *Layer, char *tilekey)
 			get_tile(lvl, tl.content, tiles_j);
 		}
 
+		bunlist_append(lvl->layers, &tl);
 		free(p);
 		u32 id = bunarr_append(lvl->layers, &tl);
 	}
@@ -409,7 +420,7 @@ static void get_tile(ldtk_lvl *lvl, bunarr *tiles, json_object *tile_i)
 
 	ldtk_tile tile = { { x, y, 0, 0 }, { sx, sy, 0, 0 }, t, f };
 
-	bunarr_append(tiles, &tile);
+	bunlist_append(tiles, &tile);
 	json_object_object_del(tile_i, "px");
 	json_object_object_del(tile_i, "src");
 	json_object_object_del(tile_i, "t");
@@ -427,7 +438,8 @@ static void get_ents(ldtk_lvl *lvl, json_object *entitiyLayer)
 	layer.tileset_path = NULL;
 	layer.composite = NULL;
 	layer.tilesize = 0;
-	layer.content = bunarr_create(sizeof(ldtk_ent), 10, free_ents);
+	layer.identifier = strdup(layer_identifier);
+	layer.content = bunlist_create(sizeof(ldtk_ent), 10, free_ents);
 	for (i32 i = 0; i < len; i++) {
 		json_object *ent;
 
@@ -452,9 +464,10 @@ static void get_ents(ldtk_lvl *lvl, json_object *entitiyLayer)
 				   .b = b,
 				   .custom_fields = field_instances };
 
-		bunarr_append(layer.content, &f_ent);
+		bunlist_append(layer.content, &f_ent);
 	}
-	bunarr_append(lvl->layers, &layer);
+	bunlist_append(lvl->layers, &layer);
+	free(layer_identifier);
 }
 
 /** \brief convert a single line csvgrid to a 2D intgrid*/
@@ -480,7 +493,7 @@ static void grid_to_walls(i32 lenx, i32 leny, i32 intgrid[lenx][leny],
 			i32 val = intgrid[x][y];
 			ldtk_rect rect = { x, y, 1, 1 };
 			ldtk_wall wall = { rect, val };
-			bunarr_append(lvl->walls, &wall);
+			bunlist_append(lvl->walls, &wall);
 		}
 	}
 }
@@ -620,7 +633,7 @@ static void get_ngbrs(ldtk_lvl *lvl, json_object *parsed_json)
 		strcpy(ngbr.path, n_path);
 		strcpy(ngbr.dir, n_dir);
 
-		bunarr_append(lvl->ngbrs, &ngbr);
+		bunlist_append(lvl->ngbrs, &ngbr);
 		free(n_dir);
 		free(n_id);
 	}
@@ -704,7 +717,7 @@ static void *json_get_ptr(json_object *obj, char *key)
 	}
 	case json_type_array: {
 		// array_list *list = json_object_get_array(field);
-		// convert this to bunarr
+		// convert this to bunlist
 		// var = json_get_str(field_i, "__value");
 		var = NULL;
 		break;
