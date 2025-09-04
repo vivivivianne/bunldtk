@@ -4,92 +4,102 @@
  * parse and use the structures */
 
 #pragma once
-#include <json-c/json.h> 
-#include "bunarr.h" 
+#include <json-c/json.h>
+#include "bunlist.h"
 
-typedef enum
-{
-	LDTK_EXTENSION_LDTK=  0x00000100,		/**< Uses .ldtkl as the extension for the main ldtk file */ // DONE
-	LDTK_EXTENSION_JSON= 0x00000200,		/**< Uses .json as the extension for the main ldtk file */ // DONE
-	LDTK_LEVEL_GREEDY_MESH= 0x00004000,		/**< Enables greedy meshing on the level walls, returning rectlanges with w, and h */ // DONE
-	LDTK_LEVEL_GRID_PARTITION= 0x00000800,		/**< Enables a grid spatial partitioning and assigns a grid cell value to each wall*/ //TBA
-	LDTK_MULTI_WORLD_ENABLE = 0x00002000,		/**< Enables Multi World Support */ //TBA
+typedef enum : u16 {
+	LDTK_EXTENSION_LDTK = 0x00000100,
+	/**< Uses .ldtkl as the extension for the main ldtk file */ // DONE
+	LDTK_EXTENSION_JSON = 0x00000200,
+	/**< Uses .json as the extension for the main ldtk file */ // DONE
+	LDTK_LEVEL_GREEDY_MESH = 0x00004000,
+	/**< Enables greedy meshing on the level walls, returning rectlanges with w, and h */ // DONE
+	LDTK_LEVEL_GRID_PARTITION = 0x00000800,
+	/**< Enables a grid spatial partitioning and assigns a grid cell value to each wall*/ //TBA
+	LDTK_MULTI_WORLD_ENABLE = 0x00002000,
+	/**< Enables Multi World Support */ //TBA
 
 } LDTK_FLAGS;
 
-typedef enum
-{
-	LVL_KEEP_NGBR=  0x00000001,	/**< Does not destroy the lvl->neighbours array */ 
-	LVL_KEEP_PATH= 0x00000002,	/**< Does not destroy the lvl->path arr */
-	LVL_KEEP_TILES= 0x00000004,	/**< Does not destroy the lvl->tiles arr */
-	LVL_KEEP_FIELDS= 0x00000008,	/**< Does not destroy the lvl->custom_fields json_object*/
+typedef enum : u8 {
+	LVL_KEEP_NGBR =
+		0x00000001, /**< Does not destroy the lvl->neighbours array */
+	LVL_KEEP_PATH = 0x00000002, /**< Does not destroy the lvl->path arr */
+	LVL_KEEP_TILES = 0x00000004, /**< Does not destroy the lvl->tiles arr */
+	LVL_KEEP_FIELDS =
+		0x00000008, /**< Does not destroy the lvl->custom_fields json_object*/
 } LDTK_LVL_FLAGS;
 
-typedef enum {
-	LDTK_LAYER_TILES,
-	LDTK_LAYER_INTGRID,
-	LDTK_LAYER_ENTITY,
-}LDTK_LAYER_TYPE;
+typedef enum
+	: u8 { LDTK_LAYER_TILES,
+	       LDTK_LAYER_INTGRID,
+	       LDTK_LAYER_ENTITY,
+	} LDTK_LAYER_TYPE;
 
-typedef struct ldtk_rect{
+typedef struct ldtk_rect {
 	i32 x, y, w, h;
-}ldtk_rect;
+} ldtk_rect;
 
-typedef struct ldtk_wall{
+typedef struct ldtk_wall {
 	ldtk_rect bb;
 	u8 type;
-}ldtk_wall;
+} ldtk_wall;
 
 typedef struct ldtk_tile {
 	ldtk_rect rect;
 	ldtk_rect src;
-	u16 t;		//tile num
-	u8 f; 		//flip: 0= not flipped, 1 = flipx, 2 = flipy 3 = flipxy
-}ldtk_tile;
+	u16 t; //tile num
+	u8 f; //flip: 0= not flipped, 1 = flipx, 2 = flipy 3 = flipxy
+} ldtk_tile;
 
 typedef struct ldtk_layer {
+	char *identifier; // The layer identifier
+	char *tileset_path; // null if entity layer
+	char *composite; // will be null unless you enalbe ldtk_PNG_LAYER or LDTK_PNG_BOTH
+	bunlist *content; // change so we actually only have one type of layer
 	LDTK_LAYER_TYPE type;
 	u32 z;
 	u16 tilesize;
-	char *tileset_path; // null if entity layer
-	char *composite; 	// will be null unless you enalbe ldtk_PNG_LAYER or LDTK_PNG_BOTH
-	bunarr *content; // change so we actually only have one type of layer
-}ldtk_layer;
 
+} ldtk_layer;
 
 typedef struct ldtk_entity { // add support for multiple entity layers later
-	json_object *custom_fields;
 	ldtk_rect rect;
-	u8 r,g,b;
-}ldtk_ent;
+	json_object *custom_fields;
+	u8 r, g, b;
+} ldtk_ent;
 
 typedef struct ldtk_level {
-	json_object *custom_fields;
 	ldtk_rect rect;
-	u8 r,g,b;
+	json_object *custom_fields;
 
 	char *id;
 	char *path;
 	// char *composite; 	// will be null unless you enalbe ldtk_PNG_LEVEL or LDTK_PNG_BOTH
 	char *bg_tile_path;
 
-	bunarr *walls;		
-	bunarr *layers; 	//change so we only have one layer type
-	bunarr *ngbrs;
-}ldtk_lvl;
+	bunlist *walls;
+	bunlist *layers; //change so we only have one layer type
+	bunlist *ngbrs;
+
+	u8 r, g, b;
+
+} ldtk_lvl;
 
 typedef struct ldtk_neighbour {
 	char *path;
-	char dir[3];
 	u32 id;
-}ldtk_ngbr;
+	char dir[3];
+} ldtk_ngbr;
 
-typedef struct ldtk_system{
-	LDTK_FLAGS flags;
-	u32 tl_size;
+typedef struct ldtk_system {
 	char *prj_dir;
 	char *prj_name;
-}ldtk_sys;
+	bunlist *ignored_intgrid_values;
+
+	LDTK_FLAGS flags;
+	u32 tl_size;
+} ldtk_sys;
 
 /** \brief Initilze the ldtk loading system,it will read you json 
  * briefly to check your settings, you can also enable extra functionalities 
@@ -98,6 +108,12 @@ typedef struct ldtk_system{
  * \param prj_dir the directory where your ldtk project is
  * \param flags one or more ldtk_FLAGS or'ed together */
 void ldtk_init(u32 tl_size, char *prj_name, char *lvl_dir, LDTK_FLAGS flags);
+
+/** free's ldtk system */
+void ldtk_free(void);
+
+/** \brief ignore the given intgrid and do not create walls with it*/
+void ldtk_ignore_intgrid_value(u32 value);
 
 /** \brief Load level from level name
  * \param lname the name of the level to be loaded
@@ -116,11 +132,11 @@ void ldtk_destroy_lvl(ldtk_lvl *lvl);
 void ldtk_destroy_lvl_ex(ldtk_lvl *lvl, LDTK_LVL_FLAGS flags);
 
 /** \brief Returns a pointer to a malloc'ed value of the requested level custom field, you must free the pointer after using it*/
-void *ldtk_get_lvl_field(ldtk_lvl *lvl,char* field);
+void *ldtk_get_lvl_field(ldtk_lvl *lvl, char *field);
 
 /** \brief Returns a pointer to a malloc'ed value of the requested Entity custom field, you must free the pointer after using it*/
-void *ldtk_get_ent_field(ldtk_ent *ent,char* field);
+void *ldtk_get_ent_field(ldtk_ent *ent, char *field);
 
 /** \brief gest a malloced pointer with the contents of the desired field, 
  * please free the pointer after using it */
-void *ldtk_get_field(json_object *custom_fields,char* field);
+void *ldtk_get_field(json_object *custom_fields, char *field);
