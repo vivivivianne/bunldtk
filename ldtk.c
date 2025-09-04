@@ -430,10 +430,15 @@ static void get_tile(ldtk_lvl *lvl, bunarr *tiles, json_object *tile_i)
 	json_object_object_del(tile_i, "f");
 }
 /** \brief Creates the entity array inside the ldtk level */
-static void get_ents(ldtk_lvl *lvl, json_object *entitiyLayer)
+static void get_ents(ldtk_lvl *lvl, json_object *entityLayer)
 {
 	json_object *entities;
-	entities = json_object_object_get(entitiyLayer, "entityInstances");
+
+	char *layer_identifier = json_get_str(entityLayer, "__identifier");
+	char identifier[300];
+	strcat(identifier, layer_identifier);
+	// strcat(identifier, "\0");
+	entities = json_object_object_get(entityLayer, "entityInstances");
 	i32 len = json_object_array_length(entities);
 	ldtk_layer layer;
 	layer.type = LDTK_LAYER_ENTITY;
