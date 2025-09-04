@@ -30,6 +30,7 @@ static void free_neighbours(usize i, void *itm);
 static void free_layers(usize i, void *itm);
 static void free_ents(usize i, void *itm);
 static bool chk_flag(i32 flag, i32 bit);
+static bool ldtk_grid_value_accepted(u32 value);
 
 static ldtk_sys sys;
 static u32 z = 0;
@@ -599,17 +600,21 @@ static void grid_to_walls_greedy(i32 lenx, i32 leny, i32 grid[lenx][leny],
 			if (currx == nextx && nextx != 0 && x + 1 < lenx) {
 				w++;
 			}
-			if (currx != nextx || x + 1 >= lenx) {
-				ldtk_rect rect = { x + 1 - w, y, w, 1 };
+			if ((currx != nextx || x + 1 >= lenx)) {
+				if (ldtk_grid_value_accepted(currx)) {
+					ldtk_rect rect = { x + 1 - w, y, w, 1 };
 
-				rect.h = expand_y(rect, lenx, leny, grid);
+					rect.h = expand_y(rect, lenx, leny,
+							  grid);
 
-				set_grid_area(rect, lenx, leny, grid, 0);
+					set_grid_area(rect, lenx, leny, grid,
+						      0);
 
-				ldtk_wall wall = { rect, currx };
+					ldtk_wall wall = { rect, currx };
+					bunlist_append(lvl->walls, &wall);
 
-				bunarr_append(lvl->walls, &wall);
-				w = 1;
+					w = 1;
+				}
 			}
 		}
 	}
@@ -741,4 +746,20 @@ static void *json_get_ptr(json_object *obj, char *key)
 	}
 
 	return var;
+}
+
+void ldtk_ignore_intgrid_value(u32 value)
+{
+	bunlist_append(sys.ignored_intgrid_values, &value);
+}
+
+static bool ldtk_grid_value_accepted(u32 value)
+{
+	for (u32 i = 0; i < sys.ignored_intgrid_values->len; i++) {
+		u32 *arrval = bunlist_get(sys.ignored_intgrid_values, i);
+		if (*arrval == value) {
+			return false;
+		}
+	}
+	return true;
 }
