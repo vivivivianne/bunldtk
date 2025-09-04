@@ -35,7 +35,7 @@ static bool ldtk_grid_value_accepted(u32 value);
 static ldtk_sys sys;
 static u32 z = 0;
 
-enum {
+enum : u16 {
 	LDTK_SINGLE_FILE = 0x00000001, /**< Single file contains all levels*/
 	LDTK_MULTI_FILE = 0x00000002, /**< Each level has their file */
 	LDTK_PNG_LAYER = 0x00000004, /**< one png for each layer of each level*/
