@@ -27,6 +27,7 @@ static i32 expand_y(ldtk_rect row, i32 lenx, i32 leny, i32 grid[lenx][leny]);
 static bool expand_x(ldtk_rect row, i32 lenx, i32 leny,
 		     i32 intgrid[lenx][leny]);
 static void free_neighbours(usize i, void *itm);
+static void free_layers(usize i, void *itm);
 static void free_ents(usize i, void *itm);
 static bool chk_flag(i32 flag, i32 bit);
 
@@ -643,6 +644,14 @@ static void free_ents(usize i, void *itm)
 {
 	ldtk_ent *ent_i = itm;
 	json_object_put(ent_i->custom_fields);
+}
+
+static void free_layers(usize i, void *itm)
+{
+	ldtk_layer *lyr = itm;
+	if (lyr->identifier != NULL) {
+		free(lyr->identifier);
+	}
 }
 
 static void free_neighbours(usize i, void *itm)
